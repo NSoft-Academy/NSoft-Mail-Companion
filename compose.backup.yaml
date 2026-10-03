@@ -1,0 +1,40 @@
+# Merge for production BEFORE creating mail storage; see docs/operations.md.
+services:
+  mail:
+    volumes:
+      - type: bind
+        source: ${NSOFT_BACKUP_ROOT:?set absolute storage directory}/vmail
+        target: /var/vmail
+      - type: bind
+        source: ${NSOFT_BACKUP_ROOT}/queue
+        target: /var/spool/postfix
+      - type: bind
+        source: ${NSOFT_BACKUP_ROOT}/tls
+        target: /data/tls
+        read_only: true
+      - type: bind
+        source: ${NSOFT_BACKUP_ROOT}/usage
+        target: /data/usage
+  worker:
+    volumes:
+      - ${NSOFT_BACKUP_ROOT}/dkim:/data/dkim
+      - ${NSOFT_BACKUP_ROOT}/routes:/data/routes
+      - ${NSOFT_BACKUP_ROOT}/tls:/data/tls:ro
+      - ${NSOFT_BACKUP_ROOT}/usage:/data/usage:ro
+  volumes-init:
+    volumes:
+      [
+        '${NSOFT_BACKUP_ROOT}/dkim:/dkim',
+        '${NSOFT_BACKUP_ROOT}/routes:/routes',
+        '${NSOFT_BACKUP_ROOT}/usage:/usage',
+      ]
+  rspamd:
+    volumes:
+      ['${NSOFT_BACKUP_ROOT}/dkim:/data/dkim:ro', '${NSOFT_BACKUP_ROOT}/rspamd:/var/lib/rspamd']
+  gateway:
+    volumes:
+      - ${NSOFT_BACKUP_ROOT}/routes:/data/routes:ro
+  acme:
+    volumes:
+      - ${NSOFT_BACKUP_ROOT}/tls:/data/tls
+      - ${NSOFT_BACKUP_ROOT}/acme-state:/acme.sh

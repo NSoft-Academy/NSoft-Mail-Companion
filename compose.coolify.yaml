@@ -1,0 +1,30 @@
+# Merge with compose.yaml: docker compose -f compose.yaml -f compose.coolify.yaml config
+# Coolify must preserve the actual published mail ports and persistent volumes.
+services:
+  web:
+    ports: !reset []
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.nsoft-panel.rule=Host(`${PANEL_HOSTNAME:?set panel hostname}`)
+      - traefik.http.routers.nsoft-panel.entrypoints=https
+      - traefik.http.routers.nsoft-panel.tls.certresolver=letsencrypt
+      - traefik.http.services.nsoft-panel.loadbalancer.server.port=3000
+      - traefik.docker.network=coolify
+    networks: [private, coolify]
+  gateway:
+    ports: !reset []
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.nsoft-webmail.rule=Host(`${MAIL_HOSTNAME}`) || HostRegexp(`^webmail\.[a-z0-9.-]+$`)
+      - traefik.http.routers.nsoft-webmail.entrypoints=https
+      - traefik.http.routers.nsoft-webmail.tls=true
+      - traefik.http.services.nsoft-webmail.loadbalancer.server.port=8080
+      - traefik.http.routers.nsoft-mail-acme.rule=Host(`${MAIL_HOSTNAME}`) && PathPrefix(`/.well-known/acme-challenge/`)
+      - traefik.http.routers.nsoft-mail-acme.entrypoints=http
+      - traefik.http.routers.nsoft-mail-acme.priority=10000
+      - traefik.http.routers.nsoft-mail-acme.service=nsoft-webmail
+      - traefik.docker.network=coolify
+    networks: [private, coolify]
+networks:
+  coolify:
+    external: true
