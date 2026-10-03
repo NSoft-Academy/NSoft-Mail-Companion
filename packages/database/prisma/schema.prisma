@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+enum Role {
+  PLATFORM_ADMIN
+  DOMAIN_ADMIN
+}
+enum JobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+model Tenant {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  createdAt DateTime @default(now()) @map("created_at")
+  users User[]
+  domains Domain[]
+  @@map("tenants")
+}
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  email String @unique
+  name String
+  passwordHash String @map("password_hash")
+  role Role
+  tenantId String? @map("tenant_id") @db.Uuid
+  tenant Tenant? @relation(fields:[tenantId],references:[id])
+  active Boolean @default(true)
+  mfaSecret String? @map("mfa_secret")
+  pendingMfaSecret String? @map("pending_mfa_secret")
+  mfaLastStep BigInt @default(0) @map("mfa_last_step")
+  createdAt DateTime @default(now()) @map("created_at")
+  sessions Session[]
+  @@map("users")
+}
+model Session {
+  id String @id @default(uuid()) @db.Uuid
+  tokenHash String @unique @map("token_hash")
+  csrfToken String @map("csrf_token")
+  userId String @map("user_id") @db.Uuid
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([expiresAt])
+  @@map("sessions")
+}
+model Domain {
+  id String @id @default(uuid()) @db.Uuid
+  name String @unique
+  tenantId String @map("tenant_id") @db.Uuid
+  tenant Tenant @relation(fields:[tenantId],references:[id])
+  verificationToken String @map("verification_token")
+  verifiedAt DateTime? @map("verified_at")
+  active Boolean @default(false)
+  sendingEnabled Boolean @default(false) @map("sending_enabled")
+  provisionedAt DateTime? @map("provisioned_at")
+  dkimPublicKey String? @map("dkim_public_key")
+  dkimSelector String @default("nsoft2026") @map("dkim_selector")
+  quotaMb Int @default(10240) @map("quota_mb")
+  mailboxLimit Int? @map("mailbox_limit")
+  readiness Json?
+  readinessAt DateTime? @map("readiness_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  mailboxes Mailbox[]
+  aliases Alias[]
+  @@index([tenantId])
+  @@map("domains")
+}
+model Mailbox {
+  id String @id @default(uuid()) @db.Uuid
+  domainId String @map("domain_id") @db.Uuid
+  domain Domain @relation(fields:[domainId],references:[id])
+  localPart String @map("local_part")
+  email String @unique
+  name String
+  passwordHash String @map("password_hash")
+  quotaMb Int @default(1024) @map("quota_mb")
+  active Boolean @default(true)
+  usedBytes BigInt @default(0) @map("used_bytes")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([domainId,localPart])
+  @@map("mailboxes")
+}
+model Alias {
+  id String @id @default(uuid()) @db.Uuid
+  domainId String @map("domain_id") @db.Uuid
+  domain Domain @relation(fields:[domainId],references:[id])
+  source String @unique
+  destinations String[]
+  active Boolean @default(true)
+  externalForwarding Boolean @default(false) @map("external_forwarding")
+  @@map("aliases")
+}
+model Job {
+  id String @id @default(uuid()) @db.Uuid
+  kind String
+  entityId String @map("entity_id") @db.Uuid
+  status JobStatus @default(PENDING)
+  attempts Int @default(0)
+  availableAt DateTime @default(now()) @map("available_at")
+  lockedAt DateTime? @map("locked_at")
+  lockToken String? @map("lock_token")
+  lastError String? @map("last_error")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([status,availableAt])
+  @@map("jobs")
+}
+model AuditLog {
+  id String @id @default(uuid()) @db.Uuid
+  actorId String? @map("actor_id") @db.Uuid
+  tenantId String? @map("tenant_id") @db.Uuid
+  action String
+  entityId String? @map("entity_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([tenantId,createdAt])
+  @@map("audit_logs")
+}
