@@ -1,0 +1,28 @@
+# Synthetic local test overlay; no production credentials or public interfaces.
+services:
+  api:
+    build: { context: ., dockerfile: docker/app.Dockerfile, target: api }
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://nsoft_runtime:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc@postgres:5432/mailcompanion
+      ENCRYPTION_KEY: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      WEB_URL: https://panel.example.test
+      REQUIRE_MFA: 'true'
+      MAIL_HOSTNAME: mail.example.test
+      PUBLIC_IPV4: 192.0.2.1
+    depends_on: { postgres: { condition: service_healthy } }
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          'fetch("http://localhost:4000/ready").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))',
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  web:
+    build: { context: ., dockerfile: docker/app.Dockerfile, target: web }
+    ports: ['127.0.0.1:3308:3000']
+    depends_on: { api: { condition: service_healthy } }

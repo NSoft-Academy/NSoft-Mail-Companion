@@ -1,0 +1,78 @@
+# Isolated synthetic test infrastructure; never deploy this file publicly.
+name: nsoft-mail-tests
+services:
+  postgres:
+    image: postgres:16.13-bookworm
+    environment:
+      POSTGRES_USER: nsoft_bootstrap
+      POSTGRES_DB: mailcompanion
+      POSTGRES_PASSWORD: test-only-password
+      MAIL_DB_PASSWORD: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      MIGRATION_DB_PASSWORD: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      APP_DB_PASSWORD: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      ROUNDCUBE_DB_PASSWORD: dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+    ports: ['127.0.0.1:55439:5432']
+    volumes: ['./docker/postgres-init.sh:/docker-entrypoint-initdb.d/10-mail.sh:ro']
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U nsoft_bootstrap -d mailcompanion']
+      interval: 2s
+      timeout: 5s
+      retries: 20
+  certificates:
+    image: nsoft-mail-test
+    entrypoint: [sh, -c]
+    command:
+      - 'openssl req -x509 -newkey rsa:2048 -nodes -keyout /data/tls/privkey.pem -out /data/tls/fullchain.pem -days 2 -subj /CN=mail.example.test -addext subjectAltName=DNS:mail.example.test,DNS:webmail.example.test; chmod 644 /data/tls/fullchain.pem; chmod 600 /data/tls/privkey.pem; mkdir -p /data/dkim/example.test; chown -R 1000:1000 /data/dkim'
+    volumes: [tls:/data/tls, dkim:/data/dkim]
+  mail:
+    build: { context: ., dockerfile: docker/mail/Dockerfile }
+    image: nsoft-mail-test
+    environment:
+      MAIL_HOSTNAME: mail.example.test
+      MAINTENANCE_INTERVAL_SECONDS: 5
+      MAIL_DB_PASSWORD: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    ports:
+      ['127.0.0.1:25250:25', '127.0.0.1:25870:587', '127.0.0.1:24650:465', '127.0.0.1:29930:993']
+    volumes: [tls:/data/tls:ro, vmail:/var/vmail, queue:/var/spool/postfix, usage:/data/usage]
+    depends_on:
+      postgres: { condition: service_healthy }
+      certificates: { condition: service_completed_successfully }
+      rspamd: { condition: service_started }
+  redis:
+    image: valkey/valkey:8.1.6-alpine
+  rspamd:
+    build: { context: ., dockerfile: docker/rspamd/Dockerfile }
+    volumes: [dkim:/data/dkim:ro]
+    depends_on: [redis, clamav]
+  clamav:
+    image: clamav/clamav:1.4.3
+    platform: linux/amd64
+  roundcube:
+    image: roundcube/roundcubemail:1.6.15-apache
+    environment:
+      ROUNDCUBEMAIL_DB_TYPE: pgsql
+      ROUNDCUBEMAIL_DB_HOST: postgres
+      ROUNDCUBEMAIL_DB_NAME: roundcube
+      ROUNDCUBEMAIL_DB_USER: roundcube
+      ROUNDCUBEMAIL_DB_PASSWORD: dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+      ROUNDCUBEMAIL_DES_KEY: test-only-roundcube-key24
+      MAIL_HOSTNAME: mail.example.test
+    volumes:
+      - ./docker/roundcube/config.inc.php:/var/roundcube/config/zz-nsoft.inc.php:ro
+      - ./docker/roundcube/test-config.inc.php:/var/roundcube/config/zzz-tests.inc.php:ro
+      - tls:/data/tls:ro
+    depends_on: { postgres: { condition: service_healthy } }
+  gateway:
+    image: nginx:1.28.2-alpine
+    ports: ['127.0.0.1:38080:8080', '127.0.0.1:38443:8443']
+    volumes:
+      - ./docker/gateway/test-nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./.runtime/routes:/data/routes:ro
+      - tls:/data/tls:ro
+    depends_on: [roundcube]
+volumes:
+  tls:
+  vmail:
+  queue:
+  dkim:
+  usage:
