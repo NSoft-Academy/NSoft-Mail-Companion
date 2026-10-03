@@ -1,0 +1,30 @@
+{
+  "name": "@nsoft/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "bootstrap": "tsx src/bootstrap.ts"
+  },
+  "dependencies": {
+    "@nsoft/core": "workspace:*",
+    "@nsoft/database": "workspace:*",
+    "dotenv": "^16.6.1",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "cors": "^2.8.6",
+    "cookie-parser": "^1.4.7",
+    "express-rate-limit": "^8.3.0",
+    "argon2": "^0.44.0",
+    "otpauth": "^9.5.1",
+    "pino": "^9.14.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/cors": "^2.8.19",
+    "@types/cookie-parser": "^1.4.10"
+  }
+}
