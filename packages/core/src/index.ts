@@ -183,3 +183,4 @@ export const envSchema = z.preprocess(
 export type Environment = z.infer<typeof rawEnvSchema>;
 
 export { z } from 'zod';
+export { hostAction, type HostOperation } from './host.js';

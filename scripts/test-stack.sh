@@ -12,6 +12,7 @@ export DATABASE_URL=postgresql://nsoft_migrate:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 pnpm db:migrate
 unset DATABASE_URL
 pnpm test:integration
+./scripts/setup-test.sh
 pnpm exec tsx scripts/setup-test-mail.ts
 pnpm exec tsx scripts/provision-test-mail.ts
 mkdir -p .runtime

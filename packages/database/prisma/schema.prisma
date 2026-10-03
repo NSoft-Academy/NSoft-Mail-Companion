@@ -121,3 +121,38 @@ model AuditLog {
   @@index([tenantId,createdAt])
   @@map("audit_logs")
 }
+
+model SystemSetup {
+  id String @id @default("installation")
+  bootstrapHash String? @map("bootstrap_hash")
+  bootstrapExpiresAt DateTime? @map("bootstrap_expires_at")
+  claimedAt DateTime? @map("claimed_at")
+  completedAt DateTime? @map("completed_at")
+  firstDomainId String? @map("first_domain_id") @db.Uuid
+  deliveryConfirmedAt DateTime? @map("delivery_confirmed_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("system_setup")
+}
+model ProviderConnection {
+  id String @id @default(uuid()) @db.Uuid
+  zoneId String @unique @map("zone_id")
+  zoneName String @map("zone_name")
+  tokenEncrypted String @map("token_encrypted")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("provider_connections")
+}
+model SystemTask {
+  id String @id @default(uuid()) @db.Uuid
+  operation String
+  target String?
+  status JobStatus @default(PENDING)
+  attempts Int @default(0)
+  availableAt DateTime @default(now()) @map("available_at")
+  lockedAt DateTime? @map("locked_at")
+  lockToken String? @db.Uuid @map("lock_token")
+  result Json?
+  lastError String? @map("last_error")
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([status,availableAt])
+  @@map("system_tasks")
+}

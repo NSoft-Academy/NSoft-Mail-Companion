@@ -37,6 +37,7 @@ import {
   audit,
 } from './service.js';
 import { ApiError } from './errors.js';
+import { setupBootstrap, setupRoutes, connectionToken } from './setup.js';
 
 export function createApp(db: PrismaClient, env: Environment) {
   const app = express();
@@ -86,6 +87,7 @@ export function createApp(db: PrismaClient, env: Environment) {
       error: { code: 'RATE_LIMITED', message: 'Too many requests. Try again later.' },
     },
   });
+  setupBootstrap(app, db, env, limit);
   app.post('/api/v1/auth/login', limit, async (req, res) => login(db, env, req, res));
   app.use('/api/v1', auth(db, env));
   app.get('/api/v1/auth/me', async (req, res) => {
@@ -398,11 +400,17 @@ export function createApp(db: PrismaClient, env: Environment) {
       .object({ zoneId: z.string().regex(/^[a-f0-9]{32}$/) })
       .strict()
       .parse(req.body);
-    const result = await cloudflare(env, `zones/${zoneId}`);
+    const result = await cloudflare(
+      { ...env, CLOUDFLARE_TOKEN: await connectionToken(db, env, zoneId) },
+      `zones/${zoneId}`,
+    );
     const zone = result as { name: string };
     if (domain.name !== zone.name && !domain.name.endsWith('.' + zone.name))
       throw new ApiError(422, 'ZONE_MISMATCH', 'Cloudflare zone does not own this domain.');
-    const current = await cloudflare(env, `zones/${zoneId}/dns_records?per_page=5000`);
+    const current = await cloudflare(
+      { ...env, CLOUDFLARE_TOKEN: await connectionToken(db, env, zoneId) },
+      `zones/${zoneId}/dns_records?per_page=5000`,
+    );
     const suggested = dnsRecords(domain, env.MAIL_HOSTNAME, env.PUBLIC_IPV4, env.SMTP_RELAY_SPF);
     res.json({ success: true, data: { suggested, current } });
   });
@@ -416,10 +424,16 @@ export function createApp(db: PrismaClient, env: Environment) {
       })
       .strict()
       .parse(req.body);
-    const zone = (await cloudflare(env, `zones/${input.zoneId}`)) as { name: string };
+    const zone = (await cloudflare(
+      { ...env, CLOUDFLARE_TOKEN: await connectionToken(db, env, input.zoneId) },
+      `zones/${input.zoneId}`,
+    )) as { name: string };
     if (domain.name !== zone.name && !domain.name.endsWith('.' + zone.name))
       throw new ApiError(422, 'ZONE_MISMATCH', 'Zone mismatch.');
-    const existing = (await cloudflare(env, `zones/${input.zoneId}/dns_records?per_page=5000`)) as {
+    const existing = (await cloudflare(
+      { ...env, CLOUDFLARE_TOKEN: await connectionToken(db, env, input.zoneId) },
+      `zones/${input.zoneId}/dns_records?per_page=5000`,
+    )) as {
       name: string;
       type: string;
       content: string;
@@ -438,23 +452,28 @@ export function createApp(db: PrismaClient, env: Environment) {
         'An existing record needs manual review, or DKIM provisioning is pending. No records changed.',
       );
     for (const r of selected)
-      await cloudflare(env, `zones/${input.zoneId}/dns_records`, {
-        method: 'POST',
-        body: JSON.stringify({
-          type: r.type,
-          name: r.name,
-          content: r.value,
-          ttl: 300,
-          proxied: false,
-          ...('priority' in r ? { priority: r.priority } : {}),
-        }),
-      });
+      await cloudflare(
+        { ...env, CLOUDFLARE_TOKEN: await connectionToken(db, env, input.zoneId) },
+        `zones/${input.zoneId}/dns_records`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            type: r.type,
+            name: r.name,
+            content: r.value,
+            ttl: 300,
+            proxied: false,
+            ...('priority' in r ? { priority: r.priority } : {}),
+          }),
+        },
+      );
     await db.auditLog.create({ data: audit(actor(req), 'DNS_APPLY', domain.id, domain.tenantId) });
     res.json({
       success: true,
       data: { message: 'Records created. Run DNS checks after propagation.' },
     });
   });
+  setupRoutes(app, db, env);
   app.use((_req, _res, next) => next(new ApiError(404, 'NOT_FOUND', 'Endpoint not found.')));
   app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (error instanceof z.ZodError)

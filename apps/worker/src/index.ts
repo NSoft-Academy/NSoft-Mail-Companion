@@ -4,11 +4,13 @@ import 'dotenv/config';
 import pino from 'pino';
 import { PrismaClient } from '@nsoft/database';
 import { envSchema } from '@nsoft/core';
+import { processSystemTask } from './system.js';
 import { monitor } from './monitor.js';
 import { processNextJob, reconcileHosts } from './jobs.js';
 const db = new PrismaClient(),
   env = envSchema.parse(process.env),
   logger = pino();
+let hostTask: Promise<void> | undefined;
 let stopping = false,
   lastMaintenance = 0;
 for (const signal of ['SIGTERM', 'SIGINT'])
@@ -18,6 +20,14 @@ for (const signal of ['SIGTERM', 'SIGINT'])
 while (!stopping) {
   try {
     await processNextJob(db, env);
+    if (!hostTask)
+      hostTask = processSystemTask(db)
+        .catch(() => {
+          logger.error({ code: 'HOST_TASK_CYCLE_FAILED' }, 'Host task will retry.');
+        })
+        .finally(() => {
+          hostTask = undefined;
+        });
     await reconcileHosts(db, env);
     if (Date.now() - lastMaintenance > 60000) {
       lastMaintenance = Date.now();
@@ -50,4 +60,5 @@ while (!stopping) {
   }
   await new Promise((resolve) => setTimeout(resolve, 1000));
 }
+await hostTask;
 await db.$disconnect();

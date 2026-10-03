@@ -377,6 +377,11 @@ export function Console() {
             Mail workspace <span className="slash">/</span> <strong>{section}</strong>
           </span>
           <div className="user">
+            {user.role === 'PLATFORM_ADMIN' && (
+              <a className="secondary compact" href="/setup">
+                Server setup & health
+              </a>
+            )}
             <span className="avatar">{user.name.slice(0, 1)}</span>
             <span>
               {user.name}

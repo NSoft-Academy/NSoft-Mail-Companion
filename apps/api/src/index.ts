@@ -14,7 +14,7 @@ if (
 const db = new PrismaClient(),
   logger = pino();
 const app = createApp(db, env);
-const server = app.listen(env.PORT, '0.0.0.0', () =>
+const server = app.listen(env.PORT, process.env.API_BIND_HOST ?? '0.0.0.0', () =>
   logger.info({ port: env.PORT }, 'api started'),
 );
 for (const signal of ['SIGTERM', 'SIGINT'])
