@@ -18,3 +18,6 @@ test-results/
 
 # Host-specific proxy configuration; retain in encrypted deployment recovery storage.
 compose.hosts.yaml
+
+__pycache__/
+*.pyc
