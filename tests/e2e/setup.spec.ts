@@ -26,9 +26,9 @@ test('private bootstrap fragment is removed, accessible responsive form and expi
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   for (const width of [320, 390, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
-    ).toBe(true);
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+      .toBe(true);
   }
   await page.getByLabel('Your name').fill('Setup Owner');
   await page.getByLabel('Administrator email').fill('owner@example.com');
@@ -82,8 +82,8 @@ test('saved setup resumes with actionable server blockers and failed-task retry'
   expect(retry).toBe(true);
   for (const width of [320, 390, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
-    ).toBe(true);
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+      .toBe(true);
   }
 });
