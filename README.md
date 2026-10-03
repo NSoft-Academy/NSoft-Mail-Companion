@@ -22,6 +22,8 @@ Billing, bulk campaigns, reseller tiers, automatic clustering, external forwardi
 
 ## Start here
 
+Follow the [step-by-step VPS, dedicated and home server guide with Coolify](docs/server-setup.md) before installing. It includes both host-managed Compose and full Coolify UI management, persistent storage, exact webmail certificates, DNS, backups and acceptance checks.
+
 Require a Linux server, Docker Engine with Compose 2.24+, a domain, public reachable IPv4, provider-controlled reverse DNS, and available mail ports. Linux x86-64 is the initial production target. Reserve at least 4 vCPU / 8 GiB RAM for a pilot including ClamAV; this is a starting budget, **not a measured mailbox capacity**. Do not install HestiaCP alongside this stack.
 
 ```sh
