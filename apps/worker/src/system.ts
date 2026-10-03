@@ -3,7 +3,7 @@
 import { randomUUID } from 'node:crypto';
 import type { PrismaClient, SystemTask } from '@nsoft/database';
 import { hostAction, type HostOperation } from '@nsoft/core';
-export async function processSystemTask(db: PrismaClient) {
+export async function processSystemTask(db: PrismaClient, signal?: AbortSignal) {
   const lease = randomUUID();
   const rows = await db.$queryRaw<
     SystemTask[]
@@ -18,6 +18,7 @@ export async function processSystemTask(db: PrismaClient) {
       task.id,
     );
     for (let n = 0; result.status === 'PENDING' || result.status === 'RUNNING'; n++) {
+      if (signal?.aborted) throw new Error('HOST_TASK_INTERRUPTED');
       if (n >= 1800) throw new Error('HOST_TASK_TIMEOUT');
       await new Promise((resolve) => setTimeout(resolve, 2000));
       result = await hostAction('task', task.id);
@@ -41,9 +42,12 @@ export async function processSystemTask(db: PrismaClient) {
     await db.systemTask.updateMany({
       where: { id: task.id, lockToken: lease, status: 'RUNNING' },
       data: {
-        status: task.attempts >= 3 ? 'FAILED' : 'PENDING',
-        lastError: 'The server action needs attention. Check the setup health cards, then retry.',
-        availableAt: new Date(Date.now() + 60000),
+        status: !signal?.aborted && task.attempts >= 3 ? 'FAILED' : 'PENDING',
+        ...(signal?.aborted ? { attempts: { decrement: 1 } } : {}),
+        lastError: signal?.aborted
+          ? null
+          : 'The server action needs attention. Check the setup health cards, then retry.',
+        availableAt: new Date(Date.now() + (signal?.aborted ? 0 : 60000)),
         lockToken: null,
         lockedAt: null,
       },

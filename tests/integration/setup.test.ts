@@ -1,6 +1,6 @@
 // Copyright © 2026 M Suthakaran, trading as NSoft Academy.
 // Licensed under the Apache License, Version 2.0.
-import { beforeAll, afterAll, describe, it, expect } from 'vitest';
+import { beforeAll, afterAll, describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import { PrismaClient } from '@nsoft/database';
 import { envSchema, digest } from '../../packages/core/src/index.js';
@@ -118,6 +118,39 @@ describe.skipIf(!process.env.SETUP_DATABASE_URL)(
         (await post('/setup/tasks', { operation: 'certificate', target: 'attacker.example.com' }))
           .status,
       ).toBe(422);
+    });
+    it('protects provider credentials and explains permission failures', async () => {
+      const providerToken = 'fixture-provider-token-1234567890',
+        zoneId = 'a'.repeat(32);
+      vi.stubGlobal(
+        'fetch',
+        vi
+          .fn()
+          .mockResolvedValue(new Response(JSON.stringify({ success: false }), { status: 403 })),
+      );
+      try {
+        const denied = await post('/setup/providers/cloudflare/zones', { token: providerToken });
+        expect(denied.status).toBe(422);
+        expect(denied.body.error.message).toContain('permissions');
+        vi.stubGlobal(
+          'fetch',
+          vi.fn().mockResolvedValue(
+            new Response(JSON.stringify({ success: true, result: { name: 'example.com' } }), {
+              status: 200,
+            }),
+          ),
+        );
+        const connected = await post('/setup/providers/cloudflare', {
+          token: providerToken,
+          zoneId,
+        });
+        expect(connected.status).toBe(200);
+        expect(JSON.stringify(connected.body)).not.toContain(providerToken);
+        const saved = await db.providerConnection.findUniqueOrThrow({ where: { zoneId } });
+        expect(saved.tokenEncrypted).not.toContain(providerToken);
+      } finally {
+        vi.unstubAllGlobals();
+      }
     });
     it('requires real domain readiness and mailbox work before completion; diagnostics contain no keys', async () => {
       expect(

@@ -143,6 +143,9 @@ describe('Authorisation and transactional mail management', () => {
   });
   it('denies platform administration to domain admins', async () => {
     expect((await get('/users')).status).toBe(403);
+    expect((await get('/setup/status')).status).toBe(403);
+    expect((await get('/setup/diagnostics')).status).toBe(403);
+    expect((await post('/setup/tasks', { operation: 'backup' })).status).toBe(403);
     expect((await post('/tenants', { name: 'Illegal' })).status).toBe(403);
   });
   it('does not permit sending without valid recent checks', async () => {

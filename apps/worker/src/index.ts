@@ -10,18 +10,20 @@ import { processNextJob, reconcileHosts } from './jobs.js';
 const db = new PrismaClient(),
   env = envSchema.parse(process.env),
   logger = pino();
+const hostStop = new AbortController();
 let hostTask: Promise<void> | undefined;
 let stopping = false,
   lastMaintenance = 0;
 for (const signal of ['SIGTERM', 'SIGINT'])
   process.on(signal, () => {
     stopping = true;
+    hostStop.abort();
   });
 while (!stopping) {
   try {
     await processNextJob(db, env);
     if (!hostTask)
-      hostTask = processSystemTask(db)
+      hostTask = processSystemTask(db, hostStop.signal)
         .catch(() => {
           logger.error({ code: 'HOST_TASK_CYCLE_FAILED' }, 'Host task will retry.');
         })

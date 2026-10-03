@@ -665,6 +665,15 @@ export function SetupWizard() {
                   <p key={c.hostname}>
                     {c.hostname}: {c.status === 'Action needed' ? 'Action needed — ' : ''}
                     {c.expiresAt ?? c.status}
+                    {c.status === 'Action needed' && (
+                      <button
+                        className="secondary compact"
+                        disabled={busy || !status.host.available}
+                        onClick={() => void run(() => task('certificate', c.hostname))}
+                      >
+                        Retry certificate
+                      </button>
+                    )}
                   </p>
                 ))}
                 <p>

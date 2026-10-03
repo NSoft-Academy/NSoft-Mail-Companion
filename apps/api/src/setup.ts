@@ -254,7 +254,7 @@ export function setupRoutes(app: Express, db: PrismaClient, env: Environment) {
           'HOSTNAME_REQUIRED',
           'Choose the mail hostname or an active domain webmail hostname.',
         );
-      if (input.target !== env.MAIL_HOSTNAME) {
+      if (input.target !== env.MAIL_HOSTNAME && input.target !== new URL(env.WEB_URL).hostname) {
         const domain = await db.domain.findUnique({
           where: { name: input.target.replace(/^webmail\./, '') },
         });
