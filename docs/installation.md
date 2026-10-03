@@ -1,5 +1,7 @@
 # Installation
 
+Start with the [beginner guided installer](beginner-setup.md): native Ubuntu 24.04 by default, Docker as an alternative, followed by browser setup. The manual Docker instructions below remain available for existing installations.
+
 ## Preflight
 
 Use a dedicated hostname such as `mail.example.com`. Its A record must point to the public mail IPv4. Set that IP's PTR to the same hostname. Every hosted domain can use the same MX target; customer webmail hostnames remain separate. Do not publish AAAA records until IPv6 routing and reverse DNS are independently supported and tested (v1 sends IPv4 only).

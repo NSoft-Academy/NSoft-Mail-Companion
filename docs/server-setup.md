@@ -1,5 +1,7 @@
 # Step-by-step server setup with Coolify
 
+Start with the [beginner guided installer](beginner-setup.md): native Ubuntu 24.04 by default, Docker as an alternative, followed by browser setup. The manual Docker instructions below remain available for existing installations.
+
 Copyright © 2026 M Suthakaran, trading as NSoft Academy. Licensed under the Apache License, Version 2.0.
 
 This guide covers a VPS, dedicated server, or home Linux server alongside Coolify. Initially support Linux x86-64 and one mail node. The implementation remains on `codex/mail-companion-foundation` until its PR is merged; `main` currently contains the project introduction only. Use a reviewed commit from that branch for a pilot. No step here guarantees external inbox placement.

@@ -38,3 +38,23 @@ Before accepting customer mail, record evidence for:
 8. Target-server capacity measurement, spam-folder handling under real filtering, sustained abuse limits, upstream container/package security scanning, independent monitoring and incident/recovery procedures.
 
 Local tests do not replace these checks. Keep production sending disabled until domain readiness succeeds and administrators have completed pilot acceptance. No merge or live deployment is part of this implementation PR.
+
+## Guided installer verification (2026-10-04)
+
+The beginner installer adds a native Ubuntu 24.04 path, optional Docker orchestration, resumable root state, a restricted Unix helper, browser bootstrap and a guided `/setup` interface. Local verification:
+
+- 22 Python installer tests cover eligibility and CGNAT-address refusal, occupied mail ports, existing services/identities, hostname injection rejection, private atomic state, role-secret separation, source staging refusal for dirty checkouts/symlinks and removal of build-created privileged modules, Cloudflare conflict preservation and zone ownership, helper cgroup authorization, idempotent replay and failed-action retries.
+- Six setup API tests run against a separately created, disposable PostgreSQL database: expiry/origin/wrong-token refusal, simultaneous bootstrap claims and replay, MFA and encrypted enrollment, idempotent first-domain creation, constrained system tasks/retries, incomplete-setup refusal, Cloudflare permission errors/encrypted provider credentials and redacted diagnostics. Three additional worker integration tests verify real database leases, bounded failures and interruption recovery through a synthetic Unix socket. Platform-only setup routes are also checked against domain administrator sessions.
+- Browser tests cover the bootstrap fragment being removed, expiry recovery, saved progress, actionable blockers, task retry, axe accessibility and 320/390/768/1024/1440/1920px layouts. The full stack run includes the existing live Roundcube browser check (six browser tests total).
+- An isolated **Ubuntu 24.04 x86-64** package fixture validates Postfix, Dovecot including Argon2 support, Rspamd, Nginx, PostgreSQL role creation, all migrations, Roundcube schema initialization and PHP syntax. This is configuration verification, not a fresh systemd installer acceptance run.
+- The existing Docker mail/security, persistence, certificate replacement, local encrypted archive restore and isolated database restore checks pass again with the new migration and API. Production application Docker builds and internal API forwarding pass.
+- Formatting, lint, strict TypeScript, unit tests and production builds pass. No live DNS, mail accounts or production services were changed.
+
+Reproduce Python checks with `pnpm test:installer`. `./scripts/test-stack.sh` includes the isolated setup API suite via `scripts/setup-test.sh`. For the native package fixture:
+
+```bash
+docker build --platform linux/amd64 -t nsoft-native-config-test -f tests/installer/Dockerfile installer
+docker run --rm --platform linux/amd64 -v "$PWD:/opt/nsoft-mail-companion:ro" nsoft-native-config-test bash /opt/nsoft-mail-companion/tests/installer/ubuntu-config.sh
+```
+
+**Still required before publishing an installer release:** fresh native and guided-Docker installation on eligible Ubuntu VMs; real systemd startup/reboot and interrupted/repeated installation; native SMTP/IMAP/webmail/alias/quota and full restore checks; actual Coolify coexistence and unrelated-route preservation; scoped Cloudflare success/permission failures in a test zone; public ACME issuance/renewal and reload failures; external inbound connectivity, residential/CGNAT scenarios and relay configuration; encrypted off-server recovery on both methods; representative nontechnical-user trials requiring no configuration-file editing on eligible direct-delivery servers. The dashboard reports a manual reviewed-update policy; automatic upgrades and automatic native/Docker conversion are absent. The guided restore check validates an isolated archive, not live recovery. Public inbox placement remains a measured test, never a promise.

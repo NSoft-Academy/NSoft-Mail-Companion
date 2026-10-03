@@ -1,5 +1,7 @@
 # Coolify integration
 
+Start with the [beginner guided installer](beginner-setup.md): native Ubuntu 24.04 by default, Docker as an alternative, followed by browser setup. The manual Docker instructions below remain available for existing installations.
+
 For a complete walkthrough, use [step-by-step server setup](server-setup.md). Choose either host-managed Compose alongside Coolify or a Coolify-managed Git application; never let both manage the same mail stack.
 
 Supported integration is a companion Docker Compose stack; there is no required modification to Coolify. Initially use a Git-based Compose application so the stack's build contexts and configuration mounts are available.

@@ -1,5 +1,7 @@
 # NSoft Mail Companion
 
+Start with the [beginner guided installer](docs/beginner-setup.md): native Ubuntu 24.04 by default, Docker as an alternative, followed by browser setup. The manual Docker instructions below remain available for existing installations.
+
 A self-hosted, Hestia-style mail companion for Coolify and standalone Docker. Create custom-domain mailboxes, delegate domain administration, and give customers their own `webmail.example.com` login.
 
 **Copyright © 2026 M Suthakaran, trading as NSoft Academy.**
