@@ -27,8 +27,18 @@ test('private bootstrap fragment is removed, accessible responsive form and expi
   for (const width of [320, 390, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     await expect
-      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
-      .toBe(true);
+      .poll(() =>
+        page.evaluate(() => ({
+          fits: document.documentElement.scrollWidth <= window.innerWidth,
+          overflowing: Array.from(document.querySelectorAll('body *'))
+            .filter((element) => element.getBoundingClientRect().right > window.innerWidth + 1)
+            .map(
+              (element) =>
+                `${element.tagName}.${element.className}: ${element.textContent?.slice(0, 80)}`,
+            ),
+        })),
+      )
+      .toEqual({ fits: true, overflowing: [] });
   }
   await page.getByLabel('Your name').fill('Setup Owner');
   await page.getByLabel('Administrator email').fill('owner@example.com');
@@ -83,7 +93,17 @@ test('saved setup resumes with actionable server blockers and failed-task retry'
   for (const width of [320, 390, 768, 1024, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     await expect
-      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
-      .toBe(true);
+      .poll(() =>
+        page.evaluate(() => ({
+          fits: document.documentElement.scrollWidth <= window.innerWidth,
+          overflowing: Array.from(document.querySelectorAll('body *'))
+            .filter((element) => element.getBoundingClientRect().right > window.innerWidth + 1)
+            .map(
+              (element) =>
+                `${element.tagName}.${element.className}: ${element.textContent?.slice(0, 80)}`,
+            ),
+        })),
+      )
+      .toEqual({ fits: true, overflowing: [] });
   }
 });

@@ -800,6 +800,7 @@ footer {
 }
 .setup-card {
   margin-top: 24px;
+  overflow-wrap: anywhere;
 }
 .setup-card h3 {
   margin-top: 24px;
@@ -809,10 +810,12 @@ footer {
 }
 .setup-card form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   margin: 20px 0;
 }
 .setup-card label {
+  min-width: 0;
   display: grid;
   gap: 8px;
 }
