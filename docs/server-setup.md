@@ -123,6 +123,9 @@ For a **new** installation:
 
 ```sh
 sudo mkdir -p /srv/nsoft-mail/{vmail,queue,tls,usage,dkim,routes,acme-state,rspamd,database}
+# Rspamd writes persistent state as UID/GID 1000; volumes-init handles the worker directories.
+sudo chown 1000:1000 /srv/nsoft-mail/rspamd
+sudo chmod 750 /srv/nsoft-mail/rspamd
 umask 077
 cat > compose.hosts.yaml <<'YAML'
 services:

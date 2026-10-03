@@ -15,3 +15,6 @@ test-results/
 
 .agents/
 *.tsbuildinfo
+
+# Host-specific proxy configuration; retain in encrypted deployment recovery storage.
+compose.hosts.yaml
