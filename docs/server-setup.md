@@ -171,7 +171,7 @@ In Bash, from this checkout:
 
 ```sh
 read -r -p 'Administrator email: ' BOOTSTRAP_EMAIL
-read -rs -p 'Administrator password: ' BOOTSTRAP_PASSWORD
+read -rs -p 'Enter administrator password ' BOOTSTRAP_PASSWORD
 printf '\n'
 export BOOTSTRAP_EMAIL BOOTSTRAP_PASSWORD
 docker compose exec -e BOOTSTRAP_EMAIL -e BOOTSTRAP_PASSWORD api pnpm bootstrap
