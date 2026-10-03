@@ -1,0 +1,43 @@
+{
+  "name": "nsoft-mail-companion",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "turbo dev --env-mode=loose",
+    "build": "turbo build",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "turbo typecheck",
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "e2e": "playwright test",
+    "db:generate": "pnpm --filter @nsoft/database generate",
+    "db:migrate": "pnpm --filter @nsoft/database migrate",
+    "bootstrap": "pnpm --filter @nsoft/api bootstrap",
+    "test:installer": "python3 -m unittest discover -s tests/installer -v"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "eslint": "^9.39.0",
+    "typescript-eslint": "^8.57.0",
+    "prettier": "^3.8.0",
+    "turbo": "^2.8.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4",
+    "@playwright/test": "^1.58.2",
+    "@axe-core/playwright": "^4.11.0",
+    "supertest": "^7.2.2",
+    "@types/supertest": "^6.0.3",
+    "@types/node": "^22.19.0",
+    "tsx": "^4.21.0",
+    "@nsoft/database": "workspace:*"
+  },
+  "type": "module",
+  "pnpm": {
+    "overrides": {
+      "postcss": "^8.5.18",
+      "deepmerge-ts": "^8.0.0"
+    }
+  }
+}

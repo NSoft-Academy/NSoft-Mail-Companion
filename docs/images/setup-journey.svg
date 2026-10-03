@@ -1,0 +1,9 @@
+<!-- Copyright © 2026 M Suthakaran, trading as NSoft Academy. Licensed under the Apache License, Version 2.0. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 310" role="img" aria-labelledby="title desc">
+<title id="title">Your mail server setup journey</title><desc id="desc">Prepare an eligible server, run the installer, open trusted HTTPS, create an administrator with MFA, connect DNS and create a mailbox, then test receiving and sending. Progress is saved.</desc>
+<rect width="960" height="310" rx="20" fill="#091321"/>
+<g fill="#edf4fa" font-family="Arial,sans-serif"><text x="30" y="42" font-size="24">NSoft Mail Companion · one step at a time</text>
+<g font-size="18"><text x="40" y="114">1. Eligible server</text><text x="362" y="114">2. Run installer</text><text x="680" y="114">3. Trusted HTTPS</text><text x="40" y="225">4. Administrator + MFA</text><text x="362" y="225">5. DNS + mailbox</text><text x="680" y="225">6. Send + receive tests</text></g>
+<g font-size="14" fill="#b8c9db"><text x="40" y="141">Ubuntu 24.04 · public IPv4 · PTR</text><text x="362" y="141">Native default · Docker option</text><text x="680" y="141">Private, single-use setup link</text><text x="40" y="252">Strong password · authenticator</text><text x="362" y="252">Cloudflare or manual records</text><text x="680" y="252">Measure inbox/spam placement</text></g></g>
+<g fill="none" stroke="#63d9be" stroke-width="3"><rect x="24" y="78" width="290" height="83" rx="12"/><rect x="344" y="78" width="290" height="83" rx="12"/><rect x="664" y="78" width="272" height="83" rx="12"/><rect x="24" y="189" width="290" height="83" rx="12"/><rect x="344" y="189" width="290" height="83" rx="12"/><rect x="664" y="189" width="272" height="83" rx="12"/></g>
+<text x="32" y="298" fill="#b8c9db" font-family="Arial,sans-serif" font-size="12">Progress is saved. Correct “Action needed” checks and retry. No guarantee of inbox delivery.</text></svg>

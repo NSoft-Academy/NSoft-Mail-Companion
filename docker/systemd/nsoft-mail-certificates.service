@@ -1,0 +1,8 @@
+[Unit]
+Description=Renew NSoft mail protocol certificates
+After=docker.service
+Requires=docker.service
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/NSoft-Mail-Companion
+ExecStart=/opt/NSoft-Mail-Companion/scripts/renew-certificates.sh

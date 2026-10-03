@@ -1,0 +1,7 @@
+services:
+  postgres:
+    ports: ['127.0.0.1:5432:5432']
+  web:
+    environment: { INTERNAL_API_URL: 'http://api:4000' }
+  api:
+    ports: ['127.0.0.1:4000:4000']

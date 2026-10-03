@@ -1,0 +1,192 @@
+name: nsoft-mail
+x-app-env: &app-env
+  NODE_ENV: ${NODE_ENV:-production}
+  DATABASE_URL: postgresql://nsoft_runtime:${APP_DB_PASSWORD:?generate app secret}@postgres:5432/mailcompanion
+  WEB_URL: ${WEB_URL:?set panel URL}
+  MAIL_HOSTNAME: ${MAIL_HOSTNAME:?set canonical hostname}
+  PUBLIC_IPV4: ${PUBLIC_IPV4:?set public IP}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?generate encryption key}
+  REQUIRE_MFA: ${REQUIRE_MFA:-true}
+  SMTP_RELAY_HOST: ${SMTP_RELAY_HOST:-}
+  SMTP_RELAY_SPF: ${SMTP_RELAY_SPF:-}
+services:
+  postgres:
+    image: postgres:16.13-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nsoft_bootstrap
+      POSTGRES_DB: mailcompanion
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?generate database secret}
+      MAIL_DB_PASSWORD: ${MAIL_DB_PASSWORD:?generate mail secret}
+      MIGRATION_DB_PASSWORD: ${MIGRATION_DB_PASSWORD:?generate migration secret}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?generate runtime secret}
+      ROUNDCUBE_DB_PASSWORD: ${ROUNDCUBE_DB_PASSWORD:?generate webmail secret}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+      - ./docker/postgres-init.sh:/docker-entrypoint-initdb.d/10-mail.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U nsoft_bootstrap -d mailcompanion']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [private]
+  migrate:
+    build: { context: ., dockerfile: docker/app.Dockerfile, target: migrate }
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgresql://nsoft_migrate:${MIGRATION_DB_PASSWORD}@postgres:5432/mailcompanion
+    depends_on: { postgres: { condition: service_healthy } }
+    networks: [private]
+  volumes-init:
+    image: alpine:3.23.3
+    command:
+      [
+        sh,
+        -c,
+        'mkdir -p /dkim /routes /usage; chown -R 1000:1000 /dkim /routes /usage; chmod 750 /dkim /routes /usage',
+      ]
+    volumes: [dkim:/dkim, routes:/routes, usage:/usage]
+    networks: [private]
+  api:
+    build: { context: ., dockerfile: docker/app.Dockerfile, target: api }
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      CLOUDFLARE_TOKEN: ${CLOUDFLARE_TOKEN:-}
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          'fetch("http://localhost:4000/ready").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))',
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks: [private]
+  worker:
+    build: { context: ., dockerfile: docker/app.Dockerfile, target: worker }
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      ALERT_WEBHOOK: ${ALERT_WEBHOOK:-}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      volumes-init: { condition: service_completed_successfully }
+    volumes: [dkim:/data/dkim, routes:/data/routes, usage:/data/usage:ro, tls:/data/tls:ro]
+    networks: [private]
+  web:
+    build: { context: ., dockerfile: docker/app.Dockerfile, target: web }
+    restart: unless-stopped
+    environment: { INTERNAL_API_URL: 'http://api:4000' }
+    ports: ['127.0.0.1:3000:3000']
+    depends_on: { api: { condition: service_healthy } }
+    networks: [private, edge]
+  mail:
+    build: { context: ., dockerfile: docker/mail/Dockerfile }
+    restart: unless-stopped
+    environment:
+      MAIL_HOSTNAME: ${MAIL_HOSTNAME}
+      MAIL_DB_PASSWORD: ${MAIL_DB_PASSWORD}
+      SMTP_RELAY_HOST: ${SMTP_RELAY_HOST:-}
+      SMTP_RELAY_USERNAME: ${SMTP_RELAY_USERNAME:-}
+      SMTP_RELAY_PASSWORD: ${SMTP_RELAY_PASSWORD:-}
+    ports: ['25:25', '465:465', '587:587', '993:993']
+    volumes: [vmail:/var/vmail, queue:/var/spool/postfix, tls:/data/tls:ro, usage:/data/usage]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      rspamd: { condition: service_started }
+    healthcheck:
+      test: [CMD-SHELL, 'postfix status && doveadm service status imap-login >/dev/null']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks: [private]
+  redis:
+    image: valkey/valkey:8.1.6-alpine
+    restart: unless-stopped
+    command: [valkey-server, --appendonly, 'yes']
+    volumes: [redis:/data]
+    networks: [private]
+  rspamd:
+    build: { context: ., dockerfile: docker/rspamd/Dockerfile }
+    restart: unless-stopped
+    volumes: [dkim:/data/dkim:ro, rspamd:/var/lib/rspamd]
+    depends_on: [redis, clamav]
+    networks: [private]
+  clamav:
+    image: clamav/clamav:1.4.3
+    platform: linux/amd64
+    restart: unless-stopped
+    volumes: [clamav:/var/lib/clamav]
+    networks: [private]
+  roundcube:
+    image: roundcube/roundcubemail:1.6.15-apache
+    restart: unless-stopped
+    environment:
+      ROUNDCUBEMAIL_DB_TYPE: pgsql
+      ROUNDCUBEMAIL_DB_HOST: postgres
+      ROUNDCUBEMAIL_DB_NAME: roundcube
+      ROUNDCUBEMAIL_DB_USER: roundcube
+      ROUNDCUBEMAIL_DB_PASSWORD: ${ROUNDCUBE_DB_PASSWORD}
+      ROUNDCUBEMAIL_DES_KEY: ${ROUNDCUBE_DES_KEY:?set 24 character secret}
+      MAIL_HOSTNAME: ${MAIL_HOSTNAME}
+    volumes:
+      [
+        './docker/roundcube/config.inc.php:/var/roundcube/config/zz-nsoft.inc.php:ro',
+        roundcube:/var/roundcube/temp,
+      ]
+    depends_on: { postgres: { condition: service_healthy } }
+    networks: [private]
+  gateway:
+    image: nginx:1.28.2-alpine
+    restart: unless-stopped
+    entrypoint: [sh, /opt/nsoft/start.sh]
+    volumes:
+      [
+        './docker/gateway/nginx.conf:/etc/nginx/nginx.conf:ro',
+        './docker/gateway/start.sh:/opt/nsoft/start.sh:ro',
+        routes:/data/routes:ro,
+        acme:/data/acme:ro,
+      ]
+    ports: ['127.0.0.1:8080:8080']
+    depends_on: [roundcube, worker]
+    networks: [private, edge]
+  acme:
+    image: neilpang/acme.sh:3.1.3
+    profiles: [certificates]
+    entrypoint: [sh, /opt/nsoft/issue.sh]
+    environment:
+      MAIL_HOSTNAME: ${MAIL_HOSTNAME}
+      ACME_EMAIL: ${ACME_EMAIL}
+      ACME_DNS_PROVIDER: ${ACME_DNS_PROVIDER:-}
+      ACME_DNS_TOKEN: ${ACME_DNS_TOKEN:-}
+      ACME_DNS_ZONE_ID: ${ACME_DNS_ZONE_ID:-}
+    volumes:
+      [
+        acme:/data/acme,
+        acme-state:/acme.sh,
+        tls:/data/tls,
+        './docker/acme/issue.sh:/opt/nsoft/issue.sh:ro',
+      ]
+    networks: [private]
+volumes:
+  postgres:
+  vmail:
+  queue:
+  dkim:
+  routes:
+  usage:
+  tls:
+  acme:
+  acme-state:
+  redis:
+  rspamd:
+  clamav:
+  roundcube:
+networks:
+  private:
+  edge:
