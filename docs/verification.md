@@ -13,7 +13,8 @@ This report records local verification on 4 October 2026. It is not a certificat
 - The same mail-protocol checks pass after recreating the mail container while preserving mail/queue/key volumes. Existing messages remain accessible.
 - Replacing a synthetic TLS certificate triggers Dovecot reload without container recreation. The synthetic gateway reload is also exercised; actual ACME issuance/renewal remains a deployment check.
 - A synthetic PostgreSQL dump restores into a separate database with its mailbox records. A local restic encrypted repository passes integrity checking and restores byte-identical database dump, Maildir and key archives. This is a local restore drill, not an off-server backup verification.
-- Production pnpm dependency audit reports no known vulnerabilities at verification time. CI additionally runs Git-history secret scanning and CodeQL; their remote results should be checked on the implementation PR.
+- Production Docker application smoke confirms the panel rewrites requests to the separate API container using its internal hostname.
+- Production pnpm dependency audit reports no known vulnerabilities at verification time. Local Git-history secret scanning reports no leaked secrets. CI additionally runs these scans and CodeQL; their remote results should be checked on the implementation PR.
 
 Reproduce with `pnpm install --frozen-lockfile`, `pnpm db:generate`, `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, Chromium installation and `./scripts/test-stack.sh`. Docker, Python with venv support, outbound image/package access and free loopback test ports are required. Synthetic fixtures and private test artifacts remain under ignored `.runtime/`. Never deploy `compose.test.yaml` or `compose.application-test.yaml` publicly.
 
@@ -21,7 +22,7 @@ Reproduce with `pnpm install --frozen-lockfile`, `pnpm db:generate`, `pnpm forma
 
 A local Docker Desktop observation during synthetic testing showed approximately 55 MiB for mail daemons, 73 MiB for Rspamd, 46 MiB for PostgreSQL and 964 MiB for ClamAV. The local engine had 7.75 GiB available. ClamAV ran as an emulated x86-64 container on an ARM Mac; these numbers are observations, not Linux production capacity ratings. They exclude application/webmail memory, operating-system overhead, peak antivirus scans, indexing and backups.
 
-No mailbox/domain throughput or customer capacity has been certified. Start pilots with at least 4 GiB RAM and monitor actual peaks; larger workloads may need substantially more. Measure simultaneous IMAP sessions, submission/delivery latency, message sizes, scanner throughput, disk IOPS, queue depth and backup duration on the target server before publishing supported capacity. There are no paid account caps; configured quotas, per-domain mailbox limits and abuse rates apply.
+No mailbox/domain throughput or customer capacity has been certified. The recommended pilot starting budget is 4 vCPU and 8 GiB RAM, matching README. This is a conservative recommendation, not a verified minimum or certified capacity; monitor actual peaks and increase resources for larger workloads. Measure simultaneous IMAP sessions, submission/delivery latency, message sizes, scanner throughput, disk IOPS, queue depth and backup duration on the target server before publishing supported capacity. There are no paid account caps; configured quotas, per-domain mailbox limits and abuse rates apply.
 
 ## Required target-server checks
 
